@@ -4,67 +4,48 @@ import axios from "axios";
 import AdmZip from "adm-zip";
 import { fileURLToPath } from "url";
 
-// Resolve current file and directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define paths and folders
+// === SAFETY FLAG ===
+const FLAG_FILE = path.join(__dirname, ".popkid_launched");
+
+// Define paths
 const rootFolder = path.join(__dirname, "node_modules", "lx");
-const npmFolders = [
-  "axios", "chalk", "rimraf", "dotenv", "morgan", "winston",
-  "minimist", "yargs", "colors", "commander", "express", "uuid",
-  "body-parser", "nodemon", "pino", "mkdirp", "debug", "cookie-parser",
-  "fs-extra", "glob", "inquirer", "pm2", "cors", "react", "vue",
-  "jest", "ts-node", "dayjs", "ms", "boxen"
-];
+const tempExtractPath = path.join(__dirname, "popkid-temp");
 
-// 🔧 Prepare required folders
-function prepareFolderTree() {
-  const options = { recursive: true };
-
-  if (!fs.existsSync(rootFolder)) {
-    fs.mkdirSync(rootFolder, options);
+// Prevent repeated extractions or self-loops
+if (fs.existsSync(FLAG_FILE)) {
+  console.log("✅ POPKID-MD already initialized, launching directly...");
+  const botFolder = path.join(tempExtractPath, "POPKID-MD-main");
+  if (fs.existsSync(botFolder)) {
+    await import(path.join(botFolder, "index.js"));
+    process.exit(0);
+  } else {
+    console.error("❌ Bot folder missing — re-initialize required.");
+    fs.unlinkSync(FLAG_FILE);
   }
-
-  for (const folder of npmFolders) {
-    const folderPath = path.join(rootFolder, folder);
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath);
-    }
-  }
-
-  // Simplified extraction folder (no deep path)
-  const finalPath = path.join(__dirname, "popkid-temp");
-  fs.mkdirSync(finalPath, { recursive: true });
-
-  return finalPath;
 }
 
-// ⬇️ Download and extract repository
+// Prepare clean environment
+fs.mkdirSync(rootFolder, { recursive: true });
+fs.mkdirSync(tempExtractPath, { recursive: true });
+
 async function downloadAndExtractRepo(destination) {
-  try {
-    console.log("🔄 Downloading POPKID-MD ZIP...");
+  console.log("🔄 Downloading POPKID-MD ZIP...");
+  const response = await axios.get(
+    "https://github.com/popkidmd/POPKID-MD/archive/refs/heads/main.zip",
+    { responseType: "arraybuffer" }
+  );
 
-    const response = await axios.get(
-      "https://github.com/popkidmd/POPKID-MD/archive/refs/heads/main.zip",
-      { responseType: "arraybuffer" }
-    );
-
-    const zip = new AdmZip(Buffer.from(response.data, "binary"));
-    zip.extractAllTo(destination, true);
-
-    console.log("✅ POPKID-MD extracted successfully");
-  } catch (error) {
-    console.error("❌ Error downloading bot:", error.message);
-    process.exit(1);
-  }
+  const zip = new AdmZip(Buffer.from(response.data, "binary"));
+  zip.extractAllTo(destination, true);
+  console.log("✅ POPKID-MD extracted successfully");
 }
 
-// 📋 Copy local config.js if available
 function copyConfig(destination) {
   const configPath = path.join(__dirname, "config.js");
   const destConfig = path.join(destination, "config.js");
-
   if (fs.existsSync(configPath)) {
     fs.copyFileSync(configPath, destConfig);
     console.log("✅ config.js copied");
@@ -73,41 +54,29 @@ function copyConfig(destination) {
   }
 }
 
-// 🚀 Launch the bot
 async function launchBot(botFolder) {
-  try {
-    console.log("🚀 Launching POPKID-MD...");
-    process.chdir(botFolder);
-
-    const entryFile = path.join(botFolder, "index.js");
-
-    if (!fs.existsSync(entryFile)) {
-      console.error("❌ index.js not found in extracted repo!");
-      process.exit(1);
-    }
-
-    await import(entryFile);
-  } catch (error) {
-    console.error("❌ Bot start error:", error.message);
-    process.exit(1);
-  }
+  console.log("🚀 Launching POPKID-MD...");
+  process.chdir(botFolder);
+  await import(path.join(botFolder, "index.js"));
 }
 
-// 🧠 Main execution
 (async () => {
-  const extractedPath = prepareFolderTree();
-  await downloadAndExtractRepo(extractedPath);
+  await downloadAndExtractRepo(tempExtractPath);
 
   const extractedDirs = fs
-    .readdirSync(extractedPath)
-    .filter(dir => fs.statSync(path.join(extractedPath, dir)).isDirectory());
+    .readdirSync(tempExtractPath)
+    .filter(d => fs.statSync(path.join(tempExtractPath, d)).isDirectory());
 
   if (!extractedDirs.length) {
-    console.error("❌ Zip extracted nothing");
+    console.error("❌ Nothing extracted from ZIP!");
     process.exit(1);
   }
 
-  const botFolder = path.join(extractedPath, extractedDirs[0]);
+  const botFolder = path.join(tempExtractPath, extractedDirs[0]);
   copyConfig(botFolder);
+
+  // create flag to prevent repeating next time
+  fs.writeFileSync(FLAG_FILE, "initialized");
+
   await launchBot(botFolder);
 })();
