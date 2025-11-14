@@ -6,7 +6,7 @@
 
 ---
 
-## 🖼️ **Bot Visual**
+## 🖼️ **POPKID MD BOT**
 
 ![POPKID-MD Bot Image](https://files.catbox.moe/9tzte1.jpg)
 
