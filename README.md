@@ -14,6 +14,9 @@
 
 ---
 
+[![Get Mini Bot Here](https://img.shields.io/badge/GET%20MINI%20BOT%20HERE-%23FF512F%20%7C%20%23DD2476?style=for-the-badge&logo=rocket&logoColor=white)](https://popkid-direct-pair-version-fc79abbae43a.herokuapp.com/)
+
+---
 # 🔧 **sᴇᴛ ᴜᴘ ❣️**
 
 ## ⭐ **1. 𝗙𝗢𝗥𝗞 𝗧𝗛𝗘 𝗕𝗢𝗧**
